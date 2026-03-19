@@ -8,16 +8,21 @@ import globalErrorHandler from "./middleware/globalErrorHandler.js";
 const app = express();
 
 app.use(cors({
-  origin: "http://localhost:5000",
+   origin: ["http://localhost:5000", "http://localhost:3000"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
+app.all('/api/auth/*any', toNodeHandler(auth));
 
 app.use(express.json());
 
 // Better-Auth handler
-app.all('/api/auth/*any', toNodeHandler(auth));
+// app.all('/api/auth', toNodeHandler(auth));
+// app.all('/api/auth/*any', toNodeHandler(auth));
+
+// app.ts
+
 
 app.get('/', (req, res) => {
   res.send("Nexus Express Server is running 🚀");
