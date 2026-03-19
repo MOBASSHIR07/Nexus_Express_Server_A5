@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth.js";
+import globalErrorHandler from "./middleware/globalErrorHandler.js";
 
 
 const app = express();
@@ -30,5 +31,5 @@ app.get('/', (req, res) => {
 // app.use("/api/admin", adminRoute)
 
 
-
+app.use(globalErrorHandler);
 export default app;
