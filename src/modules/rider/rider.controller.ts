@@ -8,11 +8,37 @@ const applyForRider = catchAsync(async (req: Request, res: Response) => {
 
   res.status(201).json({
     success: true,
-    message: "Rider profile created successfully! 🛵",
+    message: "Application submitted successfully",
+    data: result
+  });
+});
+
+const getMyAssignedParcels = catchAsync(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const result = await RiderService.getMyAssignedParcelsFromDB(user.id, req.query);
+
+  res.status(200).json({
+    success: true,
+    message: "Assigned parcels retrieved successfully",
+    meta: result.meta,
+    data: result.data
+  });
+});
+
+const updateStatus = catchAsync(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const { parcelId, status } = req.body;
+  const result = await RiderService.updateParcelStatusIntoDB(user.id, parcelId, status);
+
+  res.status(200).json({
+    success: true,
+    message: "Status updated successfully",
     data: result
   });
 });
 
 export const RiderController = {
-  applyForRider
+  applyForRider,
+  getMyAssignedParcels,
+  updateStatus
 };

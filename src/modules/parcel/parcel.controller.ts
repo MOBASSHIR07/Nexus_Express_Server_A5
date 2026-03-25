@@ -15,12 +15,13 @@ const createParcel = catchAsync(async (req: Request, res: Response) => {
 
 const getMyParcels = catchAsync(async (req: Request, res: Response) => {
   const user = (req as any).user;
-  const result = await ParcelService.getMyParcelsFromDB(user.id);
+  const result = await ParcelService.getMyParcelsFromDB(user.id, req.query);
 
   res.status(200).json({
     success: true,
     message: "Parcels retrieved successfully!",
-    data: result,
+    meta: result.meta,
+    data: result.data,
   });
 });
 

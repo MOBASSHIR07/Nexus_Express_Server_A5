@@ -13,4 +13,17 @@ router.post(
   RiderController.applyForRider
 );
 
+router.get(
+  "/my-parcels",
+  authMiddleware("RIDER"),
+  RiderController.getMyAssignedParcels
+);
+
+router.patch(
+  "/update-status",
+  authMiddleware("RIDER"),
+  validateRequest(RiderValidations.updateStatusZodSchema),
+  RiderController.updateStatus
+);
+
 export const RiderRoutes = router;

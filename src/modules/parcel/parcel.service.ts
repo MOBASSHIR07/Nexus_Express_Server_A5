@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import { getQueryOptions } from "../../utils/queryHelpers.js";
 
 const createParcelIntoDB = async (userId: string, payload: any) => {
   const { parcel, receiver } = payload;
@@ -37,11 +38,22 @@ const createParcelIntoDB = async (userId: string, payload: any) => {
   });
 };
 
-const getMyParcelsFromDB = async (userId: string) => {
-  return await prisma.parcel.findMany({
-    where: {
-      senderId: userId,
-    },
+const getMyParcelsFromDB = async (userId: string, query: any) => {
+  const searchableFields = ["title", "receiverName", "trackingCode"];
+  const { skip, take, orderBy, searchConditions } = getQueryOptions(query, searchableFields);
+
+  const whereConditions = {
+    AND: [
+      { senderId: userId },
+      searchConditions,
+    ],
+  };
+
+  const result = await prisma.parcel.findMany({
+    where: whereConditions,
+    skip,
+    take,
+    orderBy,
     include: {
       tracking: {
         include: {
@@ -53,10 +65,20 @@ const getMyParcelsFromDB = async (userId: string) => {
         },
       },
     },
-    orderBy: {
-      createdAt: "desc",
-    },
   });
+
+  const total = await prisma.parcel.count({
+    where: whereConditions,
+  });
+
+  return {
+    meta: {
+      page: Number(query.page) || 1,
+      limit: take,
+      total,
+    },
+    data: result,
+  };
 };
 
 export const ParcelService = {

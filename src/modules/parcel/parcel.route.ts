@@ -15,7 +15,7 @@ router.post(
 
 router.get(
   "/my-parcels",
-  authMiddleware("USER"),
+  authMiddleware("USER", "RIDER"),
   ParcelController.getMyParcels
 );
 

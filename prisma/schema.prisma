@@ -129,6 +129,7 @@ model Rider {
   region              String
   vehicle             String
   status              RiderStatus      @default(AVAILABLE)
+  isApproved          Boolean          @default(false)
   withdrawableBalance Decimal          @default(0.0) @db.Decimal(10, 2)
   totalEarned         Decimal          @default(0.0) @db.Decimal(10, 2)
   appliedAt           DateTime         @default(now())
