@@ -74,7 +74,11 @@ const getMyAssignedParcelsFromDB = async (userId: string, query: any) => {
   };
 };
 
-const updateParcelStatusIntoDB = async (riderUserId: string, parcelId: string, status: string) => {
+
+const updateParcelStatusIntoDB = async (riderUserId: string, payload: { parcelId: string; status: string }) => {
+  const { parcelId, status } = payload;
+
+ 
   const rider = await prisma.rider.findUnique({
     where: { userId: riderUserId }
   });
@@ -83,31 +87,64 @@ const updateParcelStatusIntoDB = async (riderUserId: string, parcelId: string, s
     throw new AppError(403, "Rider not approved or not found");
   }
 
+  
   const parcel = await prisma.parcel.findUnique({
     where: { id: parcelId }
   });
 
   if (!parcel || parcel.riderId !== rider.id) {
-    throw new AppError(403, "Unauthorized to update this parcel");
+    throw new AppError(403, "Unauthorized access to this parcel");
   }
 
   return await prisma.$transaction(async (tx) => {
+ 
     const updatedParcel = await tx.parcel.update({
       where: { id: parcelId },
       data: { deliveryStatus: status as any }
     });
 
-    const tracking = await tx.tracking.findUnique({
-      where: { parcelId }
-    });
-
+    const tracking = await tx.tracking.findUnique({ where: { parcelId } });
     if (tracking) {
       await tx.trackingStep.create({
         data: {
           trackingId: tracking.id,
           status,
           location: rider.district,
-          message: `Parcel status updated to ${status} by rider`
+          message: `Parcel status updated to ${status.toLowerCase()}`
+        }
+      });
+    }
+
+  
+    if (status === "DELIVERED") {
+      let riderCommission = 0;
+      const totalPaid = Number(parcel.price);
+
+  
+      if (parcel.category === "PARCEL") {
+        riderCommission = 50; 
+      } else {
+       
+        riderCommission = totalPaid * 0.30;
+      }
+
+     
+      await tx.rider.update({
+        where: { id: rider.id },
+        data: {
+        //   totalEarned: { increment: riderCommission },
+          withdrawableBalance: { increment: riderCommission }, 
+          status: "AVAILABLE" 
+        }
+      });
+
+  
+      await tx.riderPayment.create({
+        data: {
+          riderId: rider.id,
+          parcelId: parcelId,
+          amount: riderCommission,
+          status: "PENDING" 
         }
       });
     }
@@ -116,8 +153,47 @@ const updateParcelStatusIntoDB = async (riderUserId: string, parcelId: string, s
   });
 };
 
+const createWithdrawRequest = async (riderUserId: string, payload: { amount: number; method: any; accountNumber: string }) => {
+  const { amount, method, accountNumber } = payload;
+
+  const rider = await prisma.rider.findUnique({ 
+    where: { userId: riderUserId } 
+  });
+  
+  if (!rider) throw new AppError(404, "Rider not found");
+
+ 
+  const existingPendingRequest = await prisma.withdrawRequest.findFirst({
+    where: {
+      riderId: rider.id,
+      status: "PENDING"
+    }
+  });
+
+  if (existingPendingRequest) {
+    throw new AppError(400, "You already have a pending withdraw request. Please wait for admin approval.");
+  }
+
+  if (Number(rider.withdrawableBalance) < amount) {
+    throw new AppError(400, "Insufficient balance! Your current balance is " + rider.withdrawableBalance);
+  }
+
+
+  return await prisma.withdrawRequest.create({
+    data: {
+      riderId: rider.id,
+      amount,
+      method,
+      accountNumber,
+      status: "PENDING"
+    }
+  });
+};
+
 export const RiderService = {
   applyForRiderIntoDB,
   getMyAssignedParcelsFromDB,
-  updateParcelStatusIntoDB
+  updateParcelStatusIntoDB,
+  createWithdrawRequest
+
 };

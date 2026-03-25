@@ -51,6 +51,11 @@ enum PaymentMethod {
   BANK
 }
 
+enum ParcelCategory {
+  PARCEL
+  CARGO
+}
+
 // --- Models ---
 
 model User {
@@ -148,9 +153,11 @@ model Parcel {
   trackingCode    String         @unique
   senderId        String
   riderId         String?
+  
   title           String
-  weight          Float
-  price           Decimal        @db.Decimal(10, 2)
+  category        ParcelCategory @default(PARCEL) 
+  weight          Float          
+  price           Decimal        @db.Decimal(10, 2) 
   
   pickupAddress   String
   receiverName    String
@@ -162,12 +169,12 @@ model Parcel {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  sender       User          @relation(fields: [senderId], references: [id])
-  rider        Rider?        @relation(fields: [riderId], references: [id])
-  tracking     Tracking?
-  payment      Payment?
-  riderPayment RiderPayment?
-  review       Review?
+  sender          User           @relation(fields: [senderId], references: [id])
+  rider           Rider?         @relation(fields: [riderId], references: [id])
+  tracking        Tracking?
+  payment         Payment?
+  riderPayment    RiderPayment?
+  review          Review?
 
   @@map("parcels")
 }

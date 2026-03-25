@@ -26,4 +26,10 @@ router.patch(
   RiderController.updateStatus
 );
 
+router.post(
+  "/withdraw-request",
+   authMiddleware("RIDER"),
+  RiderController.createWithdrawRequest
+);
+
 export const RiderRoutes = router;

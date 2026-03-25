@@ -35,8 +35,20 @@ const assignRider = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const approveWithdrawRequest = catchAsync(async (req, res) => {
+  const { requestId } = req.params ;
+  const result = await AdminService.approveWithdrawRequest(requestId as string);
+
+  res.status(200).json({
+    success: true,
+    message: "Withdraw request approved!",
+    data: result,
+  });
+});
+
 export const AdminController = {
   getAllParcels,
   approveRider,
-  assignRider
+  assignRider,
+  approveWithdrawRequest
 };

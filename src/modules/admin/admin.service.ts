@@ -52,12 +52,21 @@ const approveRiderIntoDB = async (riderId: string) => {
 
 const assignRiderToParcelIntoDB = async (parcelId: string, riderId: string) => {
   return await prisma.$transaction(async (tx) => {
-    const parcel = await tx.parcel.findUnique({ where: { id: parcelId } });
+  
+    const parcel = await tx.parcel.findUnique({ 
+      where: { id: parcelId } 
+    });
 
     if (!parcel) {
       throw new AppError(404, "Parcel not found!");
     }
 
+ 
+    if (parcel.paymentStatus === "UNPAID") {
+      throw new AppError(400, "Cannot assign a rider to an unpaid parcel. Please wait for the payment.");
+    }
+
+ 
     const updatedParcel = await tx.parcel.update({
       where: { id: parcelId },
       data: { 
@@ -66,14 +75,23 @@ const assignRiderToParcelIntoDB = async (parcelId: string, riderId: string) => {
       }
     });
 
-    const tracking = await tx.tracking.findUnique({ where: { parcelId } });
+ 
+    await tx.rider.update({
+      where: { id: riderId },
+      data: { status: "BUSY" }
+    });
+
+ 
+    const tracking = await tx.tracking.findUnique({ 
+      where: { parcelId } 
+    });
 
     if (tracking) {
       await tx.trackingStep.create({
         data: {
           trackingId: tracking.id,
           status: "RIDER_ASSIGNED",
-          message: "A rider has been assigned to your parcel and is on the way."
+          message: "A professional rider has been assigned and is preparing to pick up your parcel."
         }
       });
     }
@@ -82,8 +100,52 @@ const assignRiderToParcelIntoDB = async (parcelId: string, riderId: string) => {
   });
 };
 
+const approveWithdrawRequest = async (requestId: string) => {
+  return await prisma.$transaction(async (tx) => {
+   
+    const request = await tx.withdrawRequest.findUnique({
+      where: { id: requestId },
+      include: { rider: true }
+    });
+
+    if (!request || request.status !== "PENDING") {
+      throw new AppError(400, "Invalid request or already processed");
+    }
+
+   
+    await tx.rider.update({
+      where: { id: request.riderId },
+      data: {
+        totalEarned: { increment: request.amount }, 
+        withdrawableBalance: { decrement: request.amount } 
+      }
+    });
+
+
+    const updatedRequest = await tx.withdrawRequest.update({
+      where: { id: requestId },
+      data: { 
+        status: "APPROVED",
+        processedAt: new Date()
+      }
+    });
+
+   
+    await tx.riderPayment.updateMany({
+      where: { 
+        riderId: request.riderId,
+        status: "PENDING"
+      },
+      data: { status: "PAID" }
+    });
+
+    return updatedRequest;
+  });
+};
+
 export const AdminService = {
   getAllParcelsFromDB,
   approveRiderIntoDB,
-  assignRiderToParcelIntoDB
+  assignRiderToParcelIntoDB,
+  approveWithdrawRequest
 };

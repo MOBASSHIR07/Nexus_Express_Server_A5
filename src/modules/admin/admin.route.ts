@@ -21,5 +21,10 @@ router.patch(
   authMiddleware("ADMIN"), 
   AdminController.assignRider
 );
+router.patch(
+  "/approve-withdraw/:requestId",
+  authMiddleware("ADMIN"),
+  AdminController.approveWithdrawRequest
+);
 
 export const AdminRoutes = router;

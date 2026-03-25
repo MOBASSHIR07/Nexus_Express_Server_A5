@@ -3,40 +3,43 @@ import { getQueryOptions } from "../../utils/queryHelpers.js";
 
 const createParcelIntoDB = async (userId: string, payload: any) => {
   const { parcel, receiver } = payload;
-  const trackingCode = `NEX-${Date.now()}`;
+  const { category, weight, title, pickupAddress } = parcel;
+  
+  let calculatedPrice = 0;
+
+  if (category === "PARCEL") {
+    calculatedPrice = 200;
+  } else if (category === "CARGO") {
+    calculatedPrice = weight * 100;
+  }
 
   return await prisma.$transaction(async (tx) => {
-    const newParcel = await tx.parcel.create({
+    const result = await tx.parcel.create({
       data: {
-        senderId: userId,
-        title: parcel.title,
-        weight: Number(parcel.weight),
-        price: Number(parcel.price),
-        pickupAddress: parcel.pickupAddress,
+        title,
+        category,
+        weight,
+        price: calculatedPrice,
+        pickupAddress,
         receiverName: receiver.name,
         receiverPhone: receiver.phone,
         deliveryAddress: receiver.address,
-        trackingCode,
-      },
+        senderId: userId,
+        trackingCode: `NEX-${Date.now()}`
+      }
     });
 
     await tx.tracking.create({
       data: {
-        parcelId: newParcel.id,
-        status: "PENDING",
-        steps: {
-          create: {
-            status: "Parcel Booked",
-            location: parcel.pickupAddress,
-            message: "Your delivery request has been successfully registered.",
-          },
-        },
-      },
+        parcelId: result.id,
+        status: "PENDING"
+      }
     });
 
-    return newParcel;
+    return result;
   });
 };
+
 
 const getMyParcelsFromDB = async (userId: string, query: any) => {
   const searchableFields = ["title", "receiverName", "trackingCode"];
