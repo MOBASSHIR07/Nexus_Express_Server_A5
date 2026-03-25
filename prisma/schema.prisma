@@ -12,28 +12,72 @@ datasource db {
   provider = "postgresql"
 }
 
+// --- Enums ---
+
+enum RiderStatus {
+  AVAILABLE
+  BUSY
+}
+
+enum DeliveryStatus {
+  PENDING
+  RIDER_ASSIGNED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+}
+
+enum RiderPaymentStatus {
+  PENDING
+  PAID
+}
+
+enum WithdrawStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PaymentMethod {
+  BKASH
+  NAGAD
+  ROCKET
+  BANK
+}
+
+// --- Models ---
+
 model User {
-  id            String    @id
+  id            String    @id // Better-Auth handles this ID
   name          String
-  email         String
+  email         String    @unique
   emailVerified Boolean   @default(false)
   image         String?
+  role          String?   @default("USER") // USER, RIDER, ADMIN
+  status        String?   @default("ACTIVE") // ACTIVE, BANNED
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
   sessions      Session[]
   accounts      Account[]
+  riderProfile  Rider?
+  parcels       Parcel[]
+  payments      Payment[]
+  reviews       Review[]
 
-  role   String? @default("USER")
-  status String? @default("ACTIVE")
-
-  @@unique([email])
   @@map("user")
 }
 
 model Session {
   id        String   @id
   expiresAt DateTime
-  token     String
+  token     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   ipAddress String?
@@ -41,7 +85,6 @@ model Session {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([token])
   @@index([userId])
   @@map("session")
 }
@@ -76,4 +119,137 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model Rider {
+  id                  String           @id @default(cuid())
+  userId              String           @unique
+  phone               String
+  district            String
+  region              String
+  vehicle             String
+  status              RiderStatus      @default(AVAILABLE)
+  withdrawableBalance Decimal          @default(0.0) @db.Decimal(10, 2)
+  totalEarned         Decimal          @default(0.0) @db.Decimal(10, 2)
+  appliedAt           DateTime         @default(now())
+
+  user             User              @relation(fields: [userId], references: [id])
+  assignedParcels  Parcel[]
+  riderPayments    RiderPayment[]
+  withdrawRequests WithdrawRequest[]
+  reviews          Review[]
+
+  @@map("riders")
+}
+
+model Parcel {
+  id              String         @id @default(cuid())
+  trackingCode    String         @unique
+  senderId        String
+  riderId         String?
+  title           String
+  weight          Float
+  price           Decimal        @db.Decimal(10, 2)
+  
+  pickupAddress   String
+  receiverName    String
+  receiverPhone   String
+  deliveryAddress String
+
+  deliveryStatus  DeliveryStatus @default(PENDING)
+  paymentStatus   PaymentStatus  @default(UNPAID)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  sender       User          @relation(fields: [senderId], references: [id])
+  rider        Rider?        @relation(fields: [riderId], references: [id])
+  tracking     Tracking?
+  payment      Payment?
+  riderPayment RiderPayment?
+  review       Review?
+
+  @@map("parcels")
+}
+
+model Tracking {
+  id       String         @id @default(cuid())
+  parcelId String         @unique
+  status   DeliveryStatus @default(PENDING)
+
+  parcel Parcel         @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+  steps  TrackingStep[]
+
+  @@map("trackings")
+}
+
+model TrackingStep {
+  id         String   @id @default(cuid())
+  trackingId String
+  status     String
+  location   String?
+  message    String?
+  timestamp  DateTime @default(now())
+
+  tracking Tracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
+
+  @@map("tracking_steps")
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  userId        String
+  parcelId      String   @unique
+  transactionId String   @unique
+  amount        Decimal  @db.Decimal(10, 2)
+  createdAt     DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  parcel Parcel @relation(fields: [parcelId], references: [id])
+
+  @@map("payments")
+}
+
+model RiderPayment {
+  id       String             @id @default(cuid())
+  riderId  String
+  parcelId String             @unique
+  amount   Decimal            @db.Decimal(10, 2)
+  status   RiderPaymentStatus @default(PENDING)
+  earnedAt DateTime           @default(now())
+
+  rider  Rider  @relation(fields: [riderId], references: [id])
+  parcel Parcel @relation(fields: [parcelId], references: [id])
+
+  @@map("rider_payments")
+}
+
+model WithdrawRequest {
+  id            String         @id @default(cuid())
+  riderId       String
+  amount        Decimal        @db.Decimal(10, 2)
+  method        PaymentMethod
+  accountNumber String
+  status        WithdrawStatus @default(PENDING)
+  createdAt     DateTime       @default(now())
+  processedAt   DateTime?
+
+  rider Rider @relation(fields: [riderId], references: [id])
+
+  @@map("withdraw_requests")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  parcelId  String   @unique
+  senderId  String
+  riderId   String
+  rating    Int      
+  comment   String?
+  createdAt DateTime @default(now())
+
+  parcel Parcel @relation(fields: [parcelId], references: [id])
+  sender User   @relation(fields: [senderId], references: [id])
+  rider  Rider  @relation(fields: [riderId], references: [id])
+
+  @@map("reviews")
 }

@@ -3,6 +3,7 @@ import cors from "cors";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth.js";
 import globalErrorHandler from "./middleware/globalErrorHandler.js";
+import { ParcelRoutes } from "./modules/parcel/parcel.route.js";
 
 
 const app = express();
@@ -28,9 +29,9 @@ app.get('/', (req, res) => {
   res.send("Nexus Express Server is running 🚀");
 });
 
-// Routes (পরে add করবো)
+
 // app.use("/api/user", userRoute)
-// app.use("/api/parcel", parcelRoute)
+app.use("/api/parcel", ParcelRoutes)
 // app.use("/api/rider", riderRoute)
 // app.use("/api/payment", paymentRoute)
 // app.use("/api/admin", adminRoute)
