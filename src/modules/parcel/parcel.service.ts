@@ -37,6 +37,29 @@ const createParcelIntoDB = async (userId: string, payload: any) => {
   });
 };
 
+const getMyParcelsFromDB = async (userId: string) => {
+  return await prisma.parcel.findMany({
+    where: {
+      senderId: userId,
+    },
+    include: {
+      tracking: {
+        include: {
+          steps: {
+            orderBy: {
+              timestamp: "desc",
+            },
+          },
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+};
+
 export const ParcelService = {
   createParcelIntoDB,
+  getMyParcelsFromDB,
 };

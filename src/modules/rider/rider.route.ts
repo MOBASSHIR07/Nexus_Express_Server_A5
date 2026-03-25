@@ -1,0 +1,16 @@
+import { Router } from "express";
+import { authMiddleware } from "../../middleware/authMiddleware.js";
+import validateRequest from "../../middleware/validateRequest.js";
+import { RiderValidations } from "./rider.validation.js";
+import { RiderController } from "./rider.controller.js";
+
+const router = Router();
+
+router.post(
+  "/apply",
+  authMiddleware("USER"),
+  validateRequest(RiderValidations.applyRiderZodSchema),
+  RiderController.applyForRider
+);
+
+export const RiderRoutes = router;

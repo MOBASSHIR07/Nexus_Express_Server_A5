@@ -4,6 +4,7 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth.js";
 import globalErrorHandler from "./middleware/globalErrorHandler.js";
 import { ParcelRoutes } from "./modules/parcel/parcel.route.js";
+import { RiderRoutes } from "./modules/rider/rider.route.js";
 
 
 const app = express();
@@ -30,7 +31,8 @@ app.get('/', (req, res) => {
 });
 
 
-// app.use("/api/user", userRoute)
+
+app.use("/api/rider", RiderRoutes)
 app.use("/api/parcel", ParcelRoutes)
 // app.use("/api/rider", riderRoute)
 // app.use("/api/payment", paymentRoute)

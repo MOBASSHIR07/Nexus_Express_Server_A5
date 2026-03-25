@@ -4,7 +4,6 @@ import validateRequest from "../../middleware/validateRequest.js";
 import { ParcelValidations } from "./parcel.validation.js";
 import { ParcelController } from "./parcel.controller.js";
 
-
 const router = Router();
 
 router.post(
@@ -12,6 +11,12 @@ router.post(
   authMiddleware("USER"),
   validateRequest(ParcelValidations.createParcelZodSchema),
   ParcelController.createParcel
+);
+
+router.get(
+  "/my-parcels",
+  authMiddleware("USER"),
+  ParcelController.getMyParcels
 );
 
 export const ParcelRoutes = router;
