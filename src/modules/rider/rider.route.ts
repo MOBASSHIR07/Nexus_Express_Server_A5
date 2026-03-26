@@ -32,4 +32,16 @@ router.post(
   RiderController.createWithdrawRequest
 );
 
+router.patch(
+  "/respond-parcel",
+  authMiddleware("RIDER"),
+  RiderController.respondToParcel
+);
+
+router.get(
+  "/dashboard",
+  authMiddleware("RIDER"),
+  RiderController.getRiderDashboard
+);
+
 export const RiderRoutes = router;

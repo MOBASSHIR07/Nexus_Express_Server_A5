@@ -19,4 +19,10 @@ router.get(
   ParcelController.getMyParcels
 );
 
+router.patch(
+  "/cancel-parcel/:parcelId",
+  authMiddleware("USER"),
+  ParcelController.cancelParcel
+);
+
 export const ParcelRoutes = router;

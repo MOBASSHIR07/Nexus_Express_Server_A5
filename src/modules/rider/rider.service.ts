@@ -190,10 +190,109 @@ const createWithdrawRequest = async (riderUserId: string, payload: { amount: num
   });
 };
 
+
+
+const respondToAssignedParcelIntoDB = async (riderUserId: string, payload: { parcelId: string; response: 'ACCEPTED' | 'REJECTED' }) => {
+  const { parcelId, response } = payload;
+
+  const rider = await prisma.rider.findUnique({ where: { userId: riderUserId } });
+  if (!rider) throw new AppError(404, "Rider not found");
+
+  const parcel = await prisma.parcel.findUnique({ where: { id: parcelId } });
+  if (!parcel || parcel.riderId !== rider.id) {
+    throw new AppError(403, "Unauthorized access to this parcel");
+  }
+
+  if (parcel.deliveryStatus === "CANCELLED") {
+    throw new AppError(400, "This parcel has already been cancelled by the user");
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    if (response === 'ACCEPTED') {
+      const updatedParcel = await tx.parcel.update({
+        where: { id: parcelId },
+        data: { deliveryStatus: "PICKED_UP" }
+      });
+
+      await tx.rider.update({
+        where: { id: rider.id },
+        data: { status: "BUSY" }
+      });
+
+      const tracking = await tx.tracking.findUnique({ where: { parcelId } });
+      if (tracking) {
+        await tx.trackingStep.create({
+          data: {
+            trackingId: tracking.id,
+            status: "PICKED_UP",
+            location: rider.district,
+            message: "Rider has accepted and picked up the parcel"
+          }
+        });
+      }
+      return updatedParcel;
+    } else {
+      const updatedParcel = await tx.parcel.update({
+        where: { id: parcelId },
+        data: { 
+          riderId: null, 
+          deliveryStatus: "PENDING" 
+        }
+      });
+
+      await tx.rider.update({
+        where: { id: rider.id },
+        data: { status: "AVAILABLE" }
+      });
+
+      return updatedParcel;
+    }
+  });
+};
+
+const getRiderDashboardStatsFromDB = async (riderUserId: string) => {
+  const rider = await prisma.rider.findUnique({
+    where: { userId: riderUserId },
+    include: {
+      _count: { select: { assignedParcels: true } }
+    }
+  });
+
+  if (!rider) throw new AppError(404, "Rider not found");
+
+  const deliveredCount = await prisma.parcel.count({
+    where: { riderId: rider.id, deliveryStatus: "DELIVERED" }
+  });
+
+  const pendingWithdrawAmount = await prisma.withdrawRequest.aggregate({
+    where: { riderId: rider.id, status: "PENDING" },
+    _sum: { amount: true }
+  });
+
+  const withdrawHistory = await prisma.withdrawRequest.findMany({
+    where: { riderId: rider.id },
+    orderBy: { createdAt: "desc" },
+    take: 10
+  });
+
+  return {
+    statistics: {
+      totalAssigned: rider._count.assignedParcels,
+      totalDelivered: deliveredCount,
+      totalEarned: rider.totalEarned,
+      withdrawableBalance: rider.withdrawableBalance,
+      pendingWithdraw: pendingWithdrawAmount._sum.amount || 0
+    },
+    withdrawHistory
+  };
+};
+
 export const RiderService = {
   applyForRiderIntoDB,
   getMyAssignedParcelsFromDB,
   updateParcelStatusIntoDB,
-  createWithdrawRequest
+  createWithdrawRequest,
+  respondToAssignedParcelIntoDB,
+  getRiderDashboardStatsFromDB
 
 };

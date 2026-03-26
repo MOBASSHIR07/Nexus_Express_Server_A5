@@ -25,7 +25,20 @@ const getMyParcels = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const cancelParcel = catchAsync(async (req, res) => {
+  const user = (req as any).user;
+  const { parcelId } = req.params;
+  const result = await ParcelService.cancelParcelByUserFromDB(user.id, parcelId as string);
+
+  res.status(200).json({
+    success: true,
+    message: "Parcel cancelled successfully",
+    data: result
+  });
+});
+
 export const ParcelController = {
   createParcel,
   getMyParcels,
+  cancelParcel
 };

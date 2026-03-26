@@ -47,12 +47,35 @@ const createWithdrawRequest = catchAsync(async (req, res) => {
     data: result,
   });
 });
+const respondToParcel = catchAsync(async (req, res) => {
+  const user = (req as any).user;
+  const result = await RiderService.respondToAssignedParcelIntoDB(user.id, req.body);
+
+  res.status(200).json({
+    success: true,
+    message: `Parcel ${req.body.response.toLowerCase()} successfully`,
+    data: result
+  });
+});
+
+const getRiderDashboard = catchAsync(async (req, res) => {
+  const user = (req as any).user;
+  const result = await RiderService.getRiderDashboardStatsFromDB(user.id);
+
+  res.status(200).json({
+    success: true,
+    message: "Rider dashboard data retrieved successfully",
+    data: result
+  });
+});
 
 export const RiderController = {
   applyForRider,
   getMyAssignedParcels,
   updateStatus,
-  createWithdrawRequest
+  createWithdrawRequest,
+  respondToParcel,
+  getRiderDashboard
 
   
 };
