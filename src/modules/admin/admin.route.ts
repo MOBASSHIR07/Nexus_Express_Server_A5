@@ -33,4 +33,8 @@ router.get(
   AdminController.getAdminDashboard
 );
 
+router.get("/riders", authMiddleware("ADMIN"), AdminController.getAllRiders);
+router.get("/users", authMiddleware("ADMIN"), AdminController.getAllUsers);
+router.patch("/change-role/:userId", authMiddleware("ADMIN"), AdminController.changeRole);
+
 export const AdminRoutes = router;

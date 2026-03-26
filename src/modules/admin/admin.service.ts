@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import AppError from "../../errors/AppError.js";
 import { getQueryOptions } from "../../utils/queryHelpers.js";
+import { UserRole } from "./userRole.js";
 
 const getAllParcelsFromDB = async (query: any) => {
   const searchableFields = ["trackingCode", "receiverName", "receiverPhone"];
@@ -186,10 +187,76 @@ const getAdminDashboardStatsFromDB = async () => {
   };
 };
 
+
+const getAllRidersFromDB = async (query: any) => {
+  const searchableFields = ["phone", "district"];
+  const { skip, take, orderBy, searchConditions } = getQueryOptions(query, searchableFields);
+
+  const result = await prisma.rider.findMany({
+    where: searchConditions,
+    skip,
+    take,
+    orderBy,
+    include: { user: { select: { name: true, email: true } } }
+  });
+
+  const total = await prisma.rider.count({ where: searchConditions });
+  return { meta: { page: Number(query.page) || 1, limit: take, total }, data: result };
+};
+
+
+const getAllUsersFromDB = async (query: any) => {
+  const searchableFields = ["name", "email"];
+  const { skip, take, orderBy, searchConditions } = getQueryOptions(query, searchableFields);
+
+  const result = await prisma.user.findMany({
+    where: searchConditions,
+    skip,
+    take,
+    orderBy,
+    select: { id: true, name: true, email: true, role: true, createdAt: true }
+  });
+
+  const total = await prisma.user.count({ where: searchConditions });
+  return { meta: { page: Number(query.page) || 1, limit: take, total }, data: result };
+};
+
+
+
+const changeUserRoleIntoDB = async (
+  adminId: string, 
+  targetUserId: string, 
+  newRole: UserRole
+) => {
+  
+  if (adminId === targetUserId) {
+    throw new AppError(400, "You cannot change your own role. Please contact another admin.");
+  }
+
+  
+  const user = await prisma.user.findUnique({
+    where: { id: targetUserId }
+  });
+
+  if (!user) {
+    throw new AppError(404, "Target user not found!");
+  }
+
+  
+  return await prisma.user.update({
+    where: { id: targetUserId },
+    data: { role: newRole }
+  });
+};
+
+
 export const AdminService = {
   getAllParcelsFromDB,
   approveRiderIntoDB,
   assignRiderToParcelIntoDB,
   approveWithdrawRequest,
-  getAdminDashboardStatsFromDB
+  getAdminDashboardStatsFromDB,
+  getAllRidersFromDB,
+  getAllUsersFromDB,
+  changeUserRoleIntoDB
 };

@@ -56,10 +56,42 @@ const getAdminDashboard = catchAsync(async (req, res) => {
   });
 });
 
+const changeRole = catchAsync(async (req, res) => {
+  const admin = (req as any).user; 
+  const { userId } = req.params;  
+  const { role } = req.body;      
+
+  const result = await AdminService.changeUserRoleIntoDB(
+    admin.id, 
+    userId as string, 
+    role 
+  );
+
+  res.status(200).json({
+    success: true,
+    message: "User role updated successfully!",
+    data: result
+  });
+});
+ const getAllRiders = catchAsync(async (req, res) => {
+  const result = await AdminService.getAllRidersFromDB(req.query);
+  res.status(200).json({ success: true, message: "Riders retrieved successfully!", data: result });
+});
+
+const getAllUsers = catchAsync(async (req, res) => {
+  const result = await AdminService.getAllUsersFromDB(req.query);
+  res.status(200).json({ success: true, message: "Users retrieved successfully!", data: result });
+});
+
+
+
 export const AdminController = {
   getAllParcels,
   approveRider,
   assignRider,
   approveWithdrawRequest,
-  getAdminDashboard
+  getAdminDashboard,
+  changeRole,
+  getAllRiders,
+  getAllUsers
 };
