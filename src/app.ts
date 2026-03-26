@@ -7,6 +7,7 @@ import { ParcelRoutes } from "./modules/parcel/parcel.route.js";
 import { RiderRoutes } from "./modules/rider/rider.route.js";
 import { AdminRoutes } from "./modules/admin/admin.route.js";
 import { ReviewRoutes } from "./modules/review/review.route.js";
+import { PaymentRoutes } from "./modules/payment/payment.route.js";
 
 
 const app = express();
@@ -40,7 +41,7 @@ app.use("/api/parcel", ParcelRoutes)
 // app.use("/api/payment", paymentRoute)
 app.use("/api/admin", AdminRoutes)
 app.use("/api/review", ReviewRoutes);
-// app.use("/api/payment", PaymentRoutes);
+app.use("/api/payment", PaymentRoutes);
 
 app.use(globalErrorHandler);
 export default app;
