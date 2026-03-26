@@ -36,9 +36,22 @@ const cancelParcel = catchAsync(async (req, res) => {
     data: result
   });
 });
+const trackParcel = catchAsync(async (req, res) => {
+  const { trackingCode } = req.params;
+  
+
+  const result = await ParcelService.trackParcelFromDB(trackingCode as string);
+
+   res.status(200).json({
+    success: true,
+    message: "Tracking data retrieved successfully",
+    data: result
+  });
+});
 
 export const ParcelController = {
   createParcel,
   getMyParcels,
-  cancelParcel
+  cancelParcel,
+  trackParcel
 };

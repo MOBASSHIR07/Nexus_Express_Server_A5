@@ -130,8 +130,43 @@ const cancelParcelByUserFromDB = async (userId: string, parcelId: string) => {
   });
 };
 
+const trackParcelFromDB = async (trackingCode: string) => {
+  const result = await prisma.parcel.findUnique({
+    where: { trackingCode },
+    include: {
+   
+      tracking: {
+        include: {
+        
+          steps: {
+            orderBy: {
+              timestamp: 'asc',
+            },
+          },
+        },
+      },
+      rider: {
+        include: {
+          user: {
+            select: { name: true, image: true }
+          }
+        }
+      },
+      sender: {
+        select: { name: true }
+      }
+    },
+  });
+
+  if (!result) {
+    throw new AppError(404, "Invalid tracking code. Parcel not found.");
+  }
+
+  return result;
+};
 export const ParcelService = {
   createParcelIntoDB,
   getMyParcelsFromDB,
-  cancelParcelByUserFromDB
+  cancelParcelByUserFromDB,
+  trackParcelFromDB
 };

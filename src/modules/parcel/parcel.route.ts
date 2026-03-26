@@ -25,4 +25,9 @@ router.patch(
   ParcelController.cancelParcel
 );
 
+router.get(
+  "/track/:trackingCode",
+  ParcelController.trackParcel 
+);
+
 export const ParcelRoutes = router;
