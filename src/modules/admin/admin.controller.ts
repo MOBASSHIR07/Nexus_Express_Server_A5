@@ -46,9 +46,20 @@ const approveWithdrawRequest = catchAsync(async (req, res) => {
   });
 });
 
+const getAdminDashboard = catchAsync(async (req, res) => {
+  const result = await AdminService.getAdminDashboardStatsFromDB();
+
+  res.status(200).json({
+    success: true,
+    message: "Admin dashboard statistics retrieved successfully",
+    data: result
+  });
+});
+
 export const AdminController = {
   getAllParcels,
   approveRider,
   assignRider,
-  approveWithdrawRequest
+  approveWithdrawRequest,
+  getAdminDashboard
 };

@@ -27,4 +27,10 @@ router.patch(
   AdminController.approveWithdrawRequest
 );
 
+router.get(
+  "/dashboard",
+  authMiddleware("ADMIN"),
+  AdminController.getAdminDashboard
+);
+
 export const AdminRoutes = router;

@@ -143,9 +143,53 @@ const approveWithdrawRequest = async (requestId: string) => {
   });
 };
 
+
+const getAdminDashboardStatsFromDB = async () => {
+  const totalParcels = await prisma.parcel.count();
+  const totalUsers = await prisma.user.count({ where: { role: "USER" } });
+  const totalRiders = await prisma.rider.count({ where: { isApproved: true } });
+
+  const revenueData = await prisma.parcel.aggregate({
+    _sum: { price: true }
+  });
+
+  const riderPayments = await prisma.riderPayment.aggregate({
+    _sum: { amount: true } 
+  });
+
+  const parcelStatusStats = await prisma.parcel.groupBy({
+    by: ['deliveryStatus'],
+    _count: { id: true }
+  });
+
+  const pendingWithdraws = await prisma.withdrawRequest.count({
+    where: { status: "PENDING" }
+  });
+
+  // Calculation logic with safety check
+  const totalRevenue = Number(revenueData._sum.price || 0);
+  const totalRiderCost = Number(riderPayments._sum.amount || 0); // Corrected property
+
+  return {
+    summary: {
+      totalUsers,
+      totalRiders,
+      totalParcels,
+      totalRevenue,
+      totalRiderCost,
+      netProfit: totalRevenue - totalRiderCost
+    },
+    parcelStats: parcelStatusStats,
+    pendingActions: {
+      withdrawRequests: pendingWithdraws
+    }
+  };
+};
+
 export const AdminService = {
   getAllParcelsFromDB,
   approveRiderIntoDB,
   assignRiderToParcelIntoDB,
-  approveWithdrawRequest
+  approveWithdrawRequest,
+  getAdminDashboardStatsFromDB
 };
