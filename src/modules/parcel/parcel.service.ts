@@ -5,7 +5,7 @@ import { getQueryOptions } from "../../utils/queryHelpers.js";
 const createParcelIntoDB = async (userId: string, payload: any) => {
   const { parcel, receiver } = payload;
   const { category, weight, title, pickupAddress } = parcel;
-  
+
   let calculatedPrice = 0;
 
   if (category === "PARCEL") {
@@ -30,10 +30,17 @@ const createParcelIntoDB = async (userId: string, payload: any) => {
       }
     });
 
+
     await tx.tracking.create({
       data: {
         parcelId: result.id,
-        status: "PENDING"
+        status: "PENDING",
+        steps: {
+          create: {
+            status: "PENDING",
+            message: "Parcel booked successfully. Waiting for payment or assignment."
+          }
+        }
       }
     });
 
@@ -124,7 +131,13 @@ const cancelParcelByUserFromDB = async (userId: string, parcelId: string) => {
           message: "The sender has cancelled this delivery request"
         }
       });
+      // see is it in right place
+    await tx.tracking.update({
+      where: { parcelId },
+      data: { status: "CANCELLED" }
+    });
     }
+    
 
     return updatedParcel;
   });
@@ -134,10 +147,10 @@ const trackParcelFromDB = async (trackingCode: string) => {
   const result = await prisma.parcel.findUnique({
     where: { trackingCode },
     include: {
-   
+
       tracking: {
         include: {
-        
+
           steps: {
             orderBy: {
               timestamp: 'asc',

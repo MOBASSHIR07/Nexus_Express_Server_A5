@@ -78,7 +78,7 @@ const getMyAssignedParcelsFromDB = async (userId: string, query: any) => {
 const updateParcelStatusIntoDB = async (riderUserId: string, payload: { parcelId: string; status: string }) => {
   const { parcelId, status } = payload;
 
- 
+
   const rider = await prisma.rider.findUnique({
     where: { userId: riderUserId }
   });
@@ -87,7 +87,7 @@ const updateParcelStatusIntoDB = async (riderUserId: string, payload: { parcelId
     throw new AppError(403, "Rider not approved or not found");
   }
 
-  
+
   const parcel = await prisma.parcel.findUnique({
     where: { id: parcelId }
   });
@@ -97,7 +97,7 @@ const updateParcelStatusIntoDB = async (riderUserId: string, payload: { parcelId
   }
 
   return await prisma.$transaction(async (tx) => {
- 
+
     const updatedParcel = await tx.parcel.update({
       where: { id: parcelId },
       data: { deliveryStatus: status as any }
@@ -113,38 +113,44 @@ const updateParcelStatusIntoDB = async (riderUserId: string, payload: { parcelId
           message: `Parcel status updated to ${status.toLowerCase()}`
         }
       });
+       // see is it in right place
+    await tx.tracking.update({
+      where: { parcelId },
+      data: { status: status as any }
+    });
     }
+   
 
-  
+
     if (status === "DELIVERED") {
       let riderCommission = 0;
       const totalPaid = Number(parcel.price);
 
-  
+
       if (parcel.category === "PARCEL") {
-        riderCommission = 50; 
+        riderCommission = 50;
       } else {
-       
+
         riderCommission = totalPaid * 0.30;
       }
 
-     
+
       await tx.rider.update({
         where: { id: rider.id },
         data: {
-        //   totalEarned: { increment: riderCommission },
-          withdrawableBalance: { increment: riderCommission }, 
-          status: "AVAILABLE" 
+          //   totalEarned: { increment: riderCommission },
+          withdrawableBalance: { increment: riderCommission },
+          status: "AVAILABLE"
         }
       });
 
-  
+
       await tx.riderPayment.create({
         data: {
           riderId: rider.id,
           parcelId: parcelId,
           amount: riderCommission,
-          status: "PENDING" 
+          status: "PENDING"
         }
       });
     }
@@ -156,13 +162,13 @@ const updateParcelStatusIntoDB = async (riderUserId: string, payload: { parcelId
 const createWithdrawRequest = async (riderUserId: string, payload: { amount: number; method: any; accountNumber: string }) => {
   const { amount, method, accountNumber } = payload;
 
-  const rider = await prisma.rider.findUnique({ 
-    where: { userId: riderUserId } 
+  const rider = await prisma.rider.findUnique({
+    where: { userId: riderUserId }
   });
-  
+
   if (!rider) throw new AppError(404, "Rider not found");
 
- 
+
   const existingPendingRequest = await prisma.withdrawRequest.findFirst({
     where: {
       riderId: rider.id,
@@ -229,14 +235,20 @@ const respondToAssignedParcelIntoDB = async (riderUserId: string, payload: { par
             message: "Rider has accepted and picked up the parcel"
           }
         });
+         // see is it in right place
+      await tx.tracking.update({
+        where: { parcelId },
+        data: { status: "PICKED_UP" }
+      });
       }
+     
       return updatedParcel;
     } else {
       const updatedParcel = await tx.parcel.update({
         where: { id: parcelId },
-        data: { 
-          riderId: null, 
-          deliveryStatus: "PENDING" 
+        data: {
+          riderId: null,
+          deliveryStatus: "PENDING"
         }
       });
 

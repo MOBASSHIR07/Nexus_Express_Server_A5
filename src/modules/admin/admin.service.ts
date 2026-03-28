@@ -29,8 +29,8 @@ const getAllParcelsFromDB = async (query: any) => {
 
 const approveRiderIntoDB = async (riderId: string) => {
   return await prisma.$transaction(async (tx) => {
-    const riderProfile = await tx.rider.findUnique({ 
-      where: { id: riderId } 
+    const riderProfile = await tx.rider.findUnique({
+      where: { id: riderId }
     });
 
     if (!riderProfile) {
@@ -53,38 +53,38 @@ const approveRiderIntoDB = async (riderId: string) => {
 
 const assignRiderToParcelIntoDB = async (parcelId: string, riderId: string) => {
   return await prisma.$transaction(async (tx) => {
-  
-    const parcel = await tx.parcel.findUnique({ 
-      where: { id: parcelId } 
+
+    const parcel = await tx.parcel.findUnique({
+      where: { id: parcelId }
     });
 
     if (!parcel) {
       throw new AppError(404, "Parcel not found!");
     }
 
- 
+
     if (parcel.paymentStatus === "UNPAID") {
       throw new AppError(400, "Cannot assign a rider to an unpaid parcel. Please wait for the payment.");
     }
 
- 
+
     const updatedParcel = await tx.parcel.update({
       where: { id: parcelId },
-      data: { 
+      data: {
         riderId,
-        deliveryStatus: "RIDER_ASSIGNED" 
+        deliveryStatus: "RIDER_ASSIGNED"
       }
     });
 
- 
+
     await tx.rider.update({
       where: { id: riderId },
       data: { status: "BUSY" }
     });
 
- 
-    const tracking = await tx.tracking.findUnique({ 
-      where: { parcelId } 
+
+    const tracking = await tx.tracking.findUnique({
+      where: { parcelId }
     });
 
     if (tracking) {
@@ -95,15 +95,22 @@ const assignRiderToParcelIntoDB = async (parcelId: string, riderId: string) => {
           message: "A professional rider has been assigned and is preparing to pick up your parcel."
         }
       });
-    }
+       // see is it in right place
+        await tx.tracking.update({
+      where: { parcelId },
+      data: { status: "RIDER_ASSIGNED" }
+    });
 
+    }
+   
+  
     return updatedParcel;
   });
 };
 
 const approveWithdrawRequest = async (requestId: string) => {
   return await prisma.$transaction(async (tx) => {
-   
+
     const request = await tx.withdrawRequest.findUnique({
       where: { id: requestId },
       include: { rider: true }
@@ -113,27 +120,27 @@ const approveWithdrawRequest = async (requestId: string) => {
       throw new AppError(400, "Invalid request or already processed");
     }
 
-   
+
     await tx.rider.update({
       where: { id: request.riderId },
       data: {
-        totalEarned: { increment: request.amount }, 
-        withdrawableBalance: { decrement: request.amount } 
+        totalEarned: { increment: request.amount },
+        withdrawableBalance: { decrement: request.amount }
       }
     });
 
 
     const updatedRequest = await tx.withdrawRequest.update({
       where: { id: requestId },
-      data: { 
+      data: {
         status: "APPROVED",
         processedAt: new Date()
       }
     });
 
-   
+
     await tx.riderPayment.updateMany({
-      where: { 
+      where: {
         riderId: request.riderId,
         status: "PENDING"
       },
@@ -155,7 +162,7 @@ const getAdminDashboardStatsFromDB = async () => {
   });
 
   const riderPayments = await prisma.riderPayment.aggregate({
-    _sum: { amount: true } 
+    _sum: { amount: true }
   });
 
   const parcelStatusStats = await prisma.parcel.groupBy({
@@ -224,16 +231,16 @@ const getAllUsersFromDB = async (query: any) => {
 
 
 const changeUserRoleIntoDB = async (
-  adminId: string, 
-  targetUserId: string, 
+  adminId: string,
+  targetUserId: string,
   newRole: UserRole
 ) => {
-  
+
   if (adminId === targetUserId) {
     throw new AppError(400, "You cannot change your own role. Please contact another admin.");
   }
 
-  
+
   const user = await prisma.user.findUnique({
     where: { id: targetUserId }
   });
@@ -242,7 +249,7 @@ const changeUserRoleIntoDB = async (
     throw new AppError(404, "Target user not found!");
   }
 
-  
+
   return await prisma.user.update({
     where: { id: targetUserId },
     data: { role: newRole }
