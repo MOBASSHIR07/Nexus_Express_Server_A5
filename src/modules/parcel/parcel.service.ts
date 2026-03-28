@@ -1,6 +1,57 @@
+import Stripe from "stripe";
 import AppError from "../../errors/AppError.js";
 import { prisma } from "../../lib/prisma.js";
 import { getQueryOptions } from "../../utils/queryHelpers.js";
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+// const createParcelIntoDB = async (userId: string, payload: any) => {
+
+
+//   const { parcel, receiver } = payload;
+//   const { category, weight, title, pickupAddress } = parcel;
+
+//   let calculatedPrice = 0;
+
+//   if (category === "PARCEL") {
+//     calculatedPrice = 200;
+//   } else if (category === "CARGO") {
+//     calculatedPrice = weight * 100;
+//   }
+
+//   return await prisma.$transaction(async (tx) => {
+//     const result = await tx.parcel.create({
+//       data: {
+//         title,
+//         category,
+//         weight,
+//         price: calculatedPrice,
+//         pickupAddress,
+//         receiverName: receiver.name,
+//         receiverPhone: receiver.phone,
+//         deliveryAddress: receiver.address,
+//         senderId: userId,
+//         trackingCode: `NEX-${Date.now()}`
+//       }
+//     });
+
+
+//     await tx.tracking.create({
+//       data: {
+//         parcelId: result.id,
+//         status: "PENDING",
+//         steps: {
+//           create: {
+//             status: "PENDING",
+//             message: "Parcel booked successfully. Waiting for payment or assignment."
+//           }
+//         }
+//       }
+//     });
+
+//     return result;
+//   });
+// };
+
 
 const createParcelIntoDB = async (userId: string, payload: any) => {
   const { parcel, receiver } = payload;
@@ -14,8 +65,9 @@ const createParcelIntoDB = async (userId: string, payload: any) => {
     calculatedPrice = weight * 100;
   }
 
-  return await prisma.$transaction(async (tx) => {
-    const result = await tx.parcel.create({
+  // ✅ Transaction start
+  const result = await prisma.$transaction(async (tx) => {
+    const newParcel = await tx.parcel.create({
       data: {
         title,
         category,
@@ -30,10 +82,9 @@ const createParcelIntoDB = async (userId: string, payload: any) => {
       }
     });
 
-
     await tx.tracking.create({
       data: {
-        parcelId: result.id,
+        parcelId: newParcel.id,
         status: "PENDING",
         steps: {
           create: {
@@ -44,8 +95,39 @@ const createParcelIntoDB = async (userId: string, payload: any) => {
       }
     });
 
-    return result;
+    return newParcel;
   });
+
+  // ✅ Transaction end Stripe session create
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    mode: "payment",
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: result.title,
+            description: `Tracking: ${result.trackingCode}`
+          },
+          unit_amount: Math.round(Number(result.price) * 100)
+        },
+        quantity: 1
+      }
+    ],
+    metadata: {
+      parcelId: result.id,
+      userId
+    },
+    success_url: `${process.env.FRONTEND_URL}/payment/success?parcelId=${result.id}`,
+    cancel_url: `${process.env.FRONTEND_URL}/payment/cancel`
+  });
+
+  // ✅ Parcel data + paymentUrl
+  return {
+    ...result,
+    paymentUrl: session.url
+  };
 };
 
 
