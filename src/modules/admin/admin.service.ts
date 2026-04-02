@@ -197,35 +197,76 @@ const getAdminDashboardStatsFromDB = async () => {
 
 const getAllRidersFromDB = async (query: any) => {
   const searchableFields = ["phone", "district"];
+  
+
   const { skip, take, orderBy, searchConditions } = getQueryOptions(query, searchableFields);
 
+ 
   const result = await prisma.rider.findMany({
-    where: searchConditions,
-    skip,
-    take,
-    orderBy,
-    include: { user: { select: { name: true, email: true } } }
+    where: searchConditions || {}, 
+    skip: Number(skip) >= 0 ? Number(skip) : 0, 
+    take: Number(take) > 0 ? Number(take) : 10,
+    orderBy: orderBy || { createdAt: 'desc' },
+    include: { 
+      user: { 
+        select: { 
+          name: true, 
+          email: true 
+        } 
+      } 
+    }
   });
 
-  const total = await prisma.rider.count({ where: searchConditions });
-  return { meta: { page: Number(query.page) || 1, limit: take, total }, data: result };
-};
+ 
+  const total = await prisma.rider.count({ 
+    where: searchConditions || {} 
+  });
 
+
+  return { 
+    meta: { 
+      page: Number(query.page) || 1, 
+      limit: Number(take) || 10, 
+      total 
+    }, 
+    data: result 
+  };
+};
 
 const getAllUsersFromDB = async (query: any) => {
   const searchableFields = ["name", "email"];
+  
+
   const { skip, take, orderBy, searchConditions } = getQueryOptions(query, searchableFields);
 
+  
   const result = await prisma.user.findMany({
-    where: searchConditions,
-    skip,
-    take,
-    orderBy,
-    select: { id: true, name: true, email: true, role: true, createdAt: true }
+    where: searchConditions || {}, 
+    skip: Number(skip) >= 0 ? Number(skip) : 0, 
+    take: Number(take) > 0 ? Number(take) : 10,
+    orderBy: orderBy || { createdAt: 'desc' },
+    select: { 
+      id: true, 
+      name: true, 
+      email: true, 
+      role: true, 
+      createdAt: true 
+    }
   });
 
-  const total = await prisma.user.count({ where: searchConditions });
-  return { meta: { page: Number(query.page) || 1, limit: take, total }, data: result };
+
+  const total = await prisma.user.count({ 
+    where: searchConditions || {} 
+  });
+
+  return { 
+    meta: { 
+      page: Number(query.page) || 1, 
+      limit: Number(take) || 10, 
+      total 
+    }, 
+    data: result 
+  };
 };
 
 
