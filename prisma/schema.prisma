@@ -163,6 +163,10 @@ model Parcel {
   receiverName    String
   receiverPhone   String
   deliveryAddress String
+ 
+  pickupDistrict  String         @default("") 
+ 
+  deliveryDistrict String        @default("") 
 
   deliveryStatus  DeliveryStatus @default(PENDING)
   paymentStatus   PaymentStatus  @default(UNPAID)
