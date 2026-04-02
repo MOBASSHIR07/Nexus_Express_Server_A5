@@ -83,6 +83,16 @@ const getAllUsers = catchAsync(async (req, res) => {
   res.status(200).json({ success: true, message: "Users retrieved successfully!", data: result });
 });
 
+const getAllWithdrawRequests = catchAsync(async (req: Request, res: Response) => {
+  const result = await AdminService.getAllWithdrawRequestsFromDB();
+
+  res.status(200).json({
+    success: true,
+    message: "Withdraw requests retrieved successfully!",
+    data: result
+  });
+})
+
 
 
 export const AdminController = {
@@ -93,5 +103,6 @@ export const AdminController = {
   getAdminDashboard,
   changeRole,
   getAllRiders,
-  getAllUsers
+  getAllUsers,
+  getAllWithdrawRequests
 };

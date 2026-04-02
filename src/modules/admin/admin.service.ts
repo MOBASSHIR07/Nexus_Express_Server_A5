@@ -299,6 +299,20 @@ const changeUserRoleIntoDB = async (
     data: { role: newRole }
   });
 };
+const getAllWithdrawRequestsFromDB = async () => {
+  return await prisma.withdrawRequest.findMany({
+    include: {
+      rider: {
+        include: {
+          user: {
+            select: { name: true, email: true }
+          }
+        }
+      }
+    },
+    orderBy: { createdAt: "desc" }
+  });
+};
 
 
 export const AdminService = {
@@ -309,5 +323,7 @@ export const AdminService = {
   getAdminDashboardStatsFromDB,
   getAllRidersFromDB,
   getAllUsersFromDB,
-  changeUserRoleIntoDB
+  
+  changeUserRoleIntoDB,
+  getAllWithdrawRequestsFromDB
 };

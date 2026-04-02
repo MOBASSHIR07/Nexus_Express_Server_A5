@@ -33,6 +33,12 @@ router.get(
   AdminController.getAdminDashboard
 );
 
+router.get(
+  "/withdraw-requests", 
+  authMiddleware("ADMIN"), 
+  AdminController.getAllWithdrawRequests 
+);
+
 router.get("/riders", authMiddleware("ADMIN"), AdminController.getAllRiders);
 router.get("/users", authMiddleware("ADMIN"), AdminController.getAllUsers);
 router.patch("/change-role/:userId", authMiddleware("ADMIN"), AdminController.changeRole);
