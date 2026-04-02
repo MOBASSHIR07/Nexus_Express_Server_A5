@@ -13,7 +13,7 @@ export const getQueryOptions = (query: Record<string, any>, searchableFields: st
         OR: searchableFields.map((field) => ({
           [field]: {
             contains: searchTerm,
-            mode: "insensitive",
+            mode: "insensitive" as const,
           },
         })),
       }
