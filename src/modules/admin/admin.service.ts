@@ -197,12 +197,29 @@ const getAdminDashboardStatsFromDB = async () => {
 
 const getAllRidersFromDB = async (query: any) => {
   const searchableFields = ["phone", "district"];
+  
+ 
   const { skip, take, searchConditions } = getQueryOptions(query, searchableFields);
 
+ 
+  const filterConditions: any = { ...searchConditions };
+
+  if (query.district) {
+    filterConditions.district = {
+      contains: query.district,
+      mode: "insensitive" as const, 
+    };
+  }
+
+ 
+  if (query.isApproved !== undefined) {
+    filterConditions.isApproved = query.isApproved === 'true';
+  }
+
   const result = await prisma.rider.findMany({
-    where: searchConditions,
-    skip,
-    take,
+    where: filterConditions, 
+    skip: Number(skip),
+    take: Number(take),
     orderBy: { appliedAt: "desc" }, 
     include: {
       user: {
@@ -211,10 +228,16 @@ const getAllRidersFromDB = async (query: any) => {
     },
   });
 
-  const total = await prisma.rider.count({ where: searchConditions });
+  const total = await prisma.rider.count({ 
+    where: filterConditions 
+  });
 
   return {
-    meta: { page: Number(query.page) || 1, limit: take, total },
+    meta: { 
+      page: Number(query.page) || 1, 
+      limit: Number(take), 
+      total 
+    },
     data: result,
   };
 };

@@ -54,19 +54,28 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 
 const createParcelIntoDB = async (userId: string, payload: any) => {
+
   const { parcel, receiver } = payload;
-  const { category, weight, title, pickupAddress } = parcel;
+  const { 
+    category, 
+    weight, 
+    title, 
+    pickupAddress, 
+    pickupDistrict,   
+    deliveryDistrict  
+  } = parcel;
+
 
   let calculatedPrice = 0;
-
   if (category === "PARCEL") {
     calculatedPrice = 200;
   } else if (category === "CARGO") {
     calculatedPrice = weight * 100;
   }
 
-  // ✅ Transaction start
+
   const result = await prisma.$transaction(async (tx) => {
+   
     const newParcel = await tx.parcel.create({
       data: {
         title,
@@ -74,14 +83,18 @@ const createParcelIntoDB = async (userId: string, payload: any) => {
         weight,
         price: calculatedPrice,
         pickupAddress,
+        pickupDistrict: pickupDistrict || "", 
         receiverName: receiver.name,
         receiverPhone: receiver.phone,
         deliveryAddress: receiver.address,
+    
+        deliveryDistrict: deliveryDistrict || "", 
         senderId: userId,
         trackingCode: `NEX-${Date.now()}`
       }
     });
 
+   
     await tx.tracking.create({
       data: {
         parcelId: newParcel.id,
@@ -98,7 +111,7 @@ const createParcelIntoDB = async (userId: string, payload: any) => {
     return newParcel;
   });
 
-  // ✅ Transaction end Stripe session create
+
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
     mode: "payment",
@@ -108,9 +121,9 @@ const createParcelIntoDB = async (userId: string, payload: any) => {
           currency: "usd",
           product_data: {
             name: result.title,
-            description: `Tracking: ${result.trackingCode}`
+            description: `Tracking ID: ${result.trackingCode}`
           },
-          unit_amount: Math.round(Number(result.price) * 100)
+          unit_amount: Math.round(Number(result.price) * 100) // সেন্টে কনভার্ট
         },
         quantity: 1
       }
@@ -123,7 +136,7 @@ const createParcelIntoDB = async (userId: string, payload: any) => {
     cancel_url: `${process.env.FRONTEND_URL}/payment/cancel`
   });
 
-  // ✅ Parcel data + paymentUrl
+
   return {
     ...result,
     paymentUrl: session.url
