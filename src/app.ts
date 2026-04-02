@@ -15,7 +15,7 @@ import { PaymentWebhookRoutes } from "./modules/payment/webhook.route.js";
 const app = express();
 
 app.use(cors({
-   origin: ["http://localhost:5000", "http://localhost:3000"],
+   origin: ["http://localhost:5000", "http://localhost:3000" , "https://nexus-express-client-a5.vercel.app"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"]
