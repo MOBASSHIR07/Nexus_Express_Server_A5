@@ -14,7 +14,7 @@ const applyRiderZodSchema = z.object({
 const updateStatusZodSchema = z.object({
   body: z.object({
     parcelId: z.string(),
-    status: z.enum(["PICKED_UP", "IN_TRANSIT", "DELIVERED", "CANCELLED"])
+    status: z.enum(["ACCEPTED", "PICKED_UP", "IN_TRANSIT", "DELIVERED", "CANCELLED"])
   })
 });
 
