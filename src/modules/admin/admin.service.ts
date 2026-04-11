@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import AppError from "../../errors/AppError.js";
 import { getQueryOptions } from "../../utils/queryHelpers.js";
+import { sendEmail } from "../../utils/sendEmail.js";
 import { UserRole } from "./userRole.js";
 
 const getAllParcelsFromDB = async (query: any) => {
@@ -55,7 +56,15 @@ const assignRiderToParcelIntoDB = async (parcelId: string, riderId: string) => {
   return await prisma.$transaction(async (tx) => {
 
     const parcel = await tx.parcel.findUnique({
-      where: { id: parcelId }
+      where: { id: parcelId },
+      include: {
+        sender: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
+      }
     });
 
     if (!parcel) {
@@ -104,6 +113,28 @@ const assignRiderToParcelIntoDB = async (parcelId: string, riderId: string) => {
     }
    
   
+
+    const rider = await tx.rider.findUnique({
+      where: { id: riderId },
+      include: { user: { select: { name: true } } }
+    });
+
+    if (parcel?.sender?.email && rider) {
+      sendEmail(
+        parcel.sender.email,
+        "A rider has been assigned to your parcel!",
+        {
+          senderName: parcel.sender.name,
+          trackingCode: parcel.trackingCode,
+          riderName: rider.user.name,
+          riderPhone: rider.phone,
+          parcelTitle: parcel.title,
+          frontendUrl: process.env.FRONTEND_URL || "http://localhost:5000"
+        },
+        "rider-assigned"
+      ).catch(err => console.error("Email sending failed:", err));
+    }
+
     return updatedParcel;
   });
 };
