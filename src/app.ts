@@ -15,7 +15,7 @@ import { PaymentWebhookRoutes } from "./modules/payment/webhook.route.js";
 const app = express();
 
 app.use(cors({
-   origin: ["http://localhost:5000", "http://localhost:3000" , "https://nexus-express-client-a5.vercel.app"],
+   origin: ["http://localhost:5000", "http://localhost:3000" , "https://nexus-express-client-a5.vercel.app", "https://nexus-express-server-a5.onrender.com"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"]
@@ -30,15 +30,27 @@ app.use(
 
 
 
+
+
 app.all('/api/auth/*any', toNodeHandler(auth));
 
 app.use(express.json());
 
-// Better-Auth handler
-// app.all('/api/auth', toNodeHandler(auth));
-// app.all('/api/auth/*any', toNodeHandler(auth));
 
-// app.ts
+app.get('/get-session-token', (req, res) => {
+  const cookieHeader = req.headers.cookie || '';
+
+  const tokenMatch = cookieHeader.match(/__Secure-better-auth\.session_token=([^;]+)/);
+  const token = tokenMatch ? tokenMatch[1] : null;
+
+  const redirectTo = req.query.redirect as string;
+  
+  if (redirectTo && token) {
+    return res.redirect(`${redirectTo}?token=${token}`);
+  }
+
+  res.json({ token });
+});
 
 
 app.get('/', (req, res) => {

@@ -19,8 +19,13 @@ trustedOrigins: [
   process.env.TRUSTED_AUTH_URL!,
   "http://localhost:5000",
   "http://localhost:3000",
-  "https://nexus-express-client-a5.vercel.app"
+  "https://nexus-express-client-a5.vercel.app",
+  "https://nexus-express-server-a5.onrender.com"
 ],
+
+  account: {
+    skipStateCookieCheck: true,
+  },
 
   emailAndPassword: {
     enabled: true,
