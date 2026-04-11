@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Parcel Delivered</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+        }
+        .content {
+            padding: 30px;
+            background-color: #ffffff;
+        }
+        .footer {
+            background-color: #f9fafb;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #3b82f6;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .details {
+            background-color: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .details-item {
+            margin-bottom: 8px;
+        }
+        .details-label {
+            font-weight: bold;
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Nexus Express</h1>
+            <p>Parcel Delivered Successfully!</p>
+        </div>
+        <div class="content">
+            <p>Hi <strong><%= senderName %></strong>,</p>
+            <p>Great news! Your parcel has been delivered to its destination.</p>
+            
+            <div class="details">
+                <div class="details-item">
+                    <span class="details-label">Tracking Code:</span> <%= trackingCode %>
+                </div>
+                <div class="details-item">
+                    <span class="details-label">Parcel Item:</span> <%= parcelTitle %>
+                </div>
+                <div class="details-item">
+                    <span class="details-label">Receiver Name:</span> <%= receiverName %>
+                </div>
+                <div class="details-item">
+                    <span class="details-label">Delivery Address:</span> <%= deliveryAddress %>
+                </div>
+            </div>
+
+            <p>Thank you for choosing Nexus Express for your delivery needs.</p>
+            
+            <a href="<%= frontendUrl %>/track-parcel/<%= trackingCode %>" class="button">View Delivery Status</a>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 Nexus Express. All rights reserved.</p>
+            <p>If you have any questions, please contact our support team.</p>
+        </div>
+    </div>
+</body>
+</html>

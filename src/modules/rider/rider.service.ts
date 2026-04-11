@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import AppError from "../../errors/AppError.js";
 import { getQueryOptions } from "../../utils/queryHelpers.js";
+import { sendEmail } from "../../utils/sendEmail.js";
 
 const applyForRiderIntoDB = async (userId: string, payload: any) => {
   const { rider } = payload;
@@ -89,7 +90,15 @@ const updateParcelStatusIntoDB = async (riderUserId: string, payload: { parcelId
 
 
   const parcel = await prisma.parcel.findUnique({
-    where: { id: parcelId }
+    where: { id: parcelId },
+    include: {
+      sender: {
+        select: {
+          name: true,
+          email: true
+        }
+      }
+    }
   });
 
   if (!parcel || parcel.riderId !== rider.id) {
@@ -153,6 +162,23 @@ const updateParcelStatusIntoDB = async (riderUserId: string, payload: { parcelId
           status: "PENDING"
         }
       });
+
+      // Send email to sender
+      if (parcel?.sender?.email) {
+        sendEmail(
+          parcel.sender.email,
+          "Your parcel has been delivered!",
+          {
+            senderName: parcel.sender.name,
+            trackingCode: parcel.trackingCode,
+            parcelTitle: parcel.title,
+            receiverName: parcel.receiverName,
+            deliveryAddress: parcel.deliveryAddress,
+            frontendUrl: process.env.FRONTEND_URL || "http://localhost:5000"
+          },
+          "delivery-confirmation"
+        ).catch(err => console.error("Email sending failed:", err));
+      }
     }
 
     return updatedParcel;
