@@ -179,6 +179,12 @@ const updateParcelStatusIntoDB = async (riderUserId: string, payload: { parcelId
           "delivery-confirmation"
         ).catch(err => console.error("Email sending failed:", err));
       }
+    } else if (status === "PICKED_UP") {
+      // When the rider picks up the parcel, they become BUSY
+      await tx.rider.update({
+        where: { id: rider.id },
+        data: { status: "BUSY" }
+      });
     }
 
     return updatedParcel;
@@ -247,29 +253,26 @@ const respondToAssignedParcelIntoDB = async (riderUserId: string, payload: { par
     if (response === 'ACCEPTED') {
       const updatedParcel = await tx.parcel.update({
         where: { id: parcelId },
-        data: { deliveryStatus: "PICKED_UP" }
+        data: { deliveryStatus: "ACCEPTED" }
       });
 
-      await tx.rider.update({
-        where: { id: rider.id },
-        data: { status: "BUSY" }
-      });
+      // We don't mark the rider as BUSY yet, as they are only going to pick it up.
+      // They are still locked out of other assignments by the AdminService check.
 
       const tracking = await tx.tracking.findUnique({ where: { parcelId } });
       if (tracking) {
         await tx.trackingStep.create({
           data: {
             trackingId: tracking.id,
-            status: "PICKED_UP",
+            status: "ACCEPTED",
             location: rider.district,
-            message: "Rider has accepted and picked up the parcel"
+            message: "Rider has accepted the request and is on the way to pick up the parcel."
           }
         });
-         // see is it in right place
-      await tx.tracking.update({
-        where: { parcelId },
-        data: { status: "PICKED_UP" }
-      });
+        await tx.tracking.update({
+          where: { parcelId },
+          data: { status: "ACCEPTED" }
+        });
       }
      
       return updatedParcel;
@@ -338,5 +341,4 @@ export const RiderService = {
   createWithdrawRequest,
   respondToAssignedParcelIntoDB,
   getRiderDashboardStatsFromDB
-
 };

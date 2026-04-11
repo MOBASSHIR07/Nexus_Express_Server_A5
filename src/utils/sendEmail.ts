@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import ejs from 'ejs';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -22,10 +23,29 @@ export const sendEmail = async (to: string, subject: string, templateData: any, 
     },
   });
 
-  const templatePath = path.join(process.cwd(), 'src/views/emails', `${templateName}.ejs`);
+  // Use multiple potential paths to find templates (for local and production compatibility)
+  const potentialPaths = [
+    path.join(process.cwd(), 'src/views/emails', `${templateName}.ejs`),
+    path.join(process.cwd(), 'dist/src/views/emails', `${templateName}.ejs`),
+    path.join(__dirname, '../views/emails', `${templateName}.ejs`),
+    path.join(__dirname, '../../../src/views/emails', `${templateName}.ejs`),
+  ];
+
+  let templatePath = '';
+  for (const p of potentialPaths) {
+    if (fs.existsSync(p)) {
+      templatePath = p;
+      break;
+    }
+  }
+
+  if (!templatePath) {
+    console.error(`[Email] Template not found in any of the potential paths:`, potentialPaths);
+    throw new Error(`Email template ${templateName} not found.`);
+  }
 
   try {
-    console.log(`[Email] Preparing to send to: ${to}`);
+    console.log(`[Email] Attempting to send to: ${to}`);
     console.log(`[Email] Using template: ${templatePath}`);
     
     // Render the EJS template

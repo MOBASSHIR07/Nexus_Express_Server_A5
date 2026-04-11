@@ -22,6 +22,7 @@ enum RiderStatus {
 enum DeliveryStatus {
   PENDING
   RIDER_ASSIGNED
+  ACCEPTED
   PICKED_UP
   IN_TRANSIT
   DELIVERED

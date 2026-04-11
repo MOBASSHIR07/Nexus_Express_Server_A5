@@ -77,18 +77,36 @@ const assignRiderToParcelIntoDB = async (parcelId: string, riderId: string) => {
     }
 
 
+    const rider = await tx.rider.findUnique({
+      where: { id: riderId },
+      include: { user: { select: { name: true } } }
+    });
+
+    if (!rider) {
+      throw new AppError(404, "Rider not found!");
+    }
+
+    // Check if the rider already has an active or pending parcel
+    const activeDeliveriesCount = await tx.parcel.count({
+      where: {
+        riderId: riderId,
+        deliveryStatus: {
+          in: ["RIDER_ASSIGNED", "ACCEPTED", "PICKED_UP"]
+        }
+      }
+    });
+
+    if (activeDeliveriesCount > 0) {
+      throw new AppError(400, "Rider is already handling another parcel or has a pending assignment.");
+    }
+
+
     const updatedParcel = await tx.parcel.update({
       where: { id: parcelId },
       data: {
         riderId,
         deliveryStatus: "RIDER_ASSIGNED"
       }
-    });
-
-
-    await tx.rider.update({
-      where: { id: riderId },
-      data: { status: "BUSY" }
     });
 
 
@@ -110,29 +128,6 @@ const assignRiderToParcelIntoDB = async (parcelId: string, riderId: string) => {
         data: { status: "RIDER_ASSIGNED" }
       });
 
-    }
-
-
-
-    const rider = await tx.rider.findUnique({
-      where: { id: riderId },
-      include: { user: { select: { name: true } } }
-    });
-
-    if (parcel?.sender?.email && rider) {
-      sendEmail(
-        parcel.sender.email,
-        "A rider has been assigned to your parcel!",
-        {
-          senderName: parcel.sender.name,
-          trackingCode: parcel.trackingCode,
-          riderName: rider.user.name,
-          riderPhone: rider.phone,
-          parcelTitle: parcel.title,
-          frontendUrl: process.env.FRONTEND_URL || "http://localhost:5000"
-        },
-        "rider-assigned"
-      ).catch(err => console.error("Email sending failed:", err));
     }
 
     return updatedParcel;
@@ -245,6 +240,18 @@ const getAllRidersFromDB = async (query: any) => {
 
   if (query.isApproved !== undefined) {
     filterConditions.isApproved = query.isApproved === 'true';
+  }
+
+  // New: Handle availability filtering
+  if (query.isAvailable === 'true') {
+    filterConditions.status = "AVAILABLE";
+    filterConditions.assignedParcels = {
+      none: {
+        deliveryStatus: {
+          in: ["RIDER_ASSIGNED", "ACCEPTED", "PICKED_UP"]
+        }
+      }
+    };
   }
 
   const result = await prisma.rider.findMany({

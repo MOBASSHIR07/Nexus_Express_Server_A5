@@ -76,6 +76,4 @@ export const RiderController = {
   createWithdrawRequest,
   respondToParcel,
   getRiderDashboard
-
-  
 };
