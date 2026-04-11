@@ -35,7 +35,7 @@ const getMyAssignedParcelsFromDB = async (userId: string, query: any) => {
   });
 
   if (!rider) {
-    throw new AppError(404, "Rider profile not found");
+    throw new AppError(404, "Rider profile not found. Please ensure you have an approved application.");
   }
 
   const whereConditions = {
@@ -85,7 +85,7 @@ const updateParcelStatusIntoDB = async (riderUserId: string, payload: { parcelId
   });
 
   if (!rider || !rider.isApproved) {
-    throw new AppError(403, "Rider not approved or not found");
+    throw new AppError(403, "Rider profile not found or not approved. Please ensure your application is approved.");
   }
 
 
@@ -192,7 +192,9 @@ const createWithdrawRequest = async (riderUserId: string, payload: { amount: num
     where: { userId: riderUserId }
   });
 
-  if (!rider) throw new AppError(404, "Rider not found");
+  if (!rider) {
+    throw new AppError(404, "Rider profile not found. Please ensure you have an approved application.");
+  }
 
 
   const existingPendingRequest = await prisma.withdrawRequest.findFirst({
@@ -228,7 +230,9 @@ const respondToAssignedParcelIntoDB = async (riderUserId: string, payload: { par
   const { parcelId, response } = payload;
 
   const rider = await prisma.rider.findUnique({ where: { userId: riderUserId } });
-  if (!rider) throw new AppError(404, "Rider not found");
+  if (!rider) {
+    throw new AppError(404, "Rider profile not found. Please ensure your application is approved.");
+  }
 
   const parcel = await prisma.parcel.findUnique({ where: { id: parcelId } });
   if (!parcel || parcel.riderId !== rider.id) {
@@ -296,7 +300,9 @@ const getRiderDashboardStatsFromDB = async (riderUserId: string) => {
     }
   });
 
-  if (!rider) throw new AppError(404, "Rider not found");
+  if (!rider) {
+    throw new AppError(404, "Rider profile not found. Please ensure your application is approved.");
+  }
 
   const deliveredCount = await prisma.parcel.count({
     where: { riderId: rider.id, deliveryStatus: "DELIVERED" }

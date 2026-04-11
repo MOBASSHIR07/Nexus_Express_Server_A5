@@ -104,15 +104,15 @@ const assignRiderToParcelIntoDB = async (parcelId: string, riderId: string) => {
           message: "A professional rider has been assigned and is preparing to pick up your parcel."
         }
       });
-       // see is it in right place
-        await tx.tracking.update({
-      where: { parcelId },
-      data: { status: "RIDER_ASSIGNED" }
-    });
+      // see is it in right place
+      await tx.tracking.update({
+        where: { parcelId },
+        data: { status: "RIDER_ASSIGNED" }
+      });
 
     }
-   
-  
+
+
 
     const rider = await tx.rider.findUnique({
       where: { id: riderId },
@@ -228,30 +228,30 @@ const getAdminDashboardStatsFromDB = async () => {
 
 const getAllRidersFromDB = async (query: any) => {
   const searchableFields = ["phone", "district"];
-  
- 
+
+
   const { skip, take, searchConditions } = getQueryOptions(query, searchableFields);
 
- 
+
   const filterConditions: any = { ...searchConditions };
 
   if (query.district) {
     filterConditions.district = {
       contains: query.district,
-      mode: "insensitive" as const, 
+      mode: "insensitive" as const,
     };
   }
 
- 
+
   if (query.isApproved !== undefined) {
     filterConditions.isApproved = query.isApproved === 'true';
   }
 
   const result = await prisma.rider.findMany({
-    where: filterConditions, 
+    where: filterConditions,
     skip: Number(skip),
     take: Number(take),
-    orderBy: { appliedAt: "desc" }, 
+    orderBy: { appliedAt: "desc" },
     include: {
       user: {
         select: { name: true, email: true },
@@ -259,15 +259,15 @@ const getAllRidersFromDB = async (query: any) => {
     },
   });
 
-  const total = await prisma.rider.count({ 
-    where: filterConditions 
+  const total = await prisma.rider.count({
+    where: filterConditions
   });
 
   return {
-    meta: { 
-      page: Number(query.page) || 1, 
-      limit: Number(take), 
-      total 
+    meta: {
+      page: Number(query.page) || 1,
+      limit: Number(take),
+      total
     },
     data: result,
   };
@@ -308,7 +308,7 @@ const getAllUsersFromDB = async (query: any) => {
 const changeUserRoleIntoDB = async (
   adminId: string,
   targetUserId: string,
-  newRole: UserRole
+  newRole: string
 ) => {
 
   if (adminId === targetUserId) {
@@ -324,10 +324,48 @@ const changeUserRoleIntoDB = async (
     throw new AppError(404, "Target user not found!");
   }
 
+  // Handle Rider consistency
+  return await prisma.$transaction(async (tx) => {
+    // 1. If becoming a RIDER
+    if (newRole === "RIDER") {
+      const riderProfile = await tx.rider.findUnique({
+        where: { userId: targetUserId }
+      });
 
-  return await prisma.user.update({
-    where: { id: targetUserId },
-    data: { role: newRole }
+      if (!riderProfile) {
+        throw new AppError(
+          400,
+          "User cannot be made a Rider without a Rider Profile. Please ensure the user has submitted a rider application with their vehicle and contact details."
+        );
+      }
+
+      // Sync approval status
+      await tx.rider.update({
+        where: { userId: targetUserId },
+        data: { isApproved: true }
+      });
+    }
+
+    // 2. If moving AWAY from RIDER role
+    if (user.role === "RIDER" && newRole !== "RIDER") {
+      const riderProfile = await tx.rider.findUnique({
+        where: { userId: targetUserId }
+      });
+
+      if (riderProfile) {
+        // De-approve the rider profile but keep the data for history
+        await tx.rider.update({
+          where: { userId: targetUserId },
+          data: { isApproved: false }
+        });
+      }
+    }
+
+    // 3. Update the User role
+    return await tx.user.update({
+      where: { id: targetUserId },
+      data: { role: newRole }
+    });
   });
 };
 const getAllWithdrawRequestsFromDB = async () => {
@@ -354,7 +392,7 @@ export const AdminService = {
   getAdminDashboardStatsFromDB,
   getAllRidersFromDB,
   getAllUsersFromDB,
-  
+
   changeUserRoleIntoDB,
   getAllWithdrawRequestsFromDB
 };
