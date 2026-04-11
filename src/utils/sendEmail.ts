@@ -15,20 +15,22 @@ export const sendEmail = async (to: string, subject: string, templateData: any, 
 
   const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // true for 465, false for other ports
+    port: 465,
+    secure: true, 
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+    connectionTimeout: 20000, // 20 seconds
+    greetingTimeout: 20000,
   });
 
-  // Use multiple potential paths to find templates (for local and production compatibility)
+  // Precise path resolution prioritized by __dirname (relative to this file)
   const potentialPaths = [
+    path.join(__dirname, '../views/emails', `${templateName}.ejs`),
     path.join(process.cwd(), 'src/views/emails', `${templateName}.ejs`),
     path.join(process.cwd(), 'dist/src/views/emails', `${templateName}.ejs`),
-    path.join(__dirname, '../views/emails', `${templateName}.ejs`),
-    path.join(__dirname, '../../../src/views/emails', `${templateName}.ejs`),
+    path.join('/opt/render/project/src/src/views/emails', `${templateName}.ejs`), // Fallback for Render unusual structure
   ];
 
   let templatePath = '';
@@ -40,29 +42,28 @@ export const sendEmail = async (to: string, subject: string, templateData: any, 
   }
 
   if (!templatePath) {
-    console.error(`[Email] Template not found in any of the potential paths:`, potentialPaths);
+    console.error(`[Email] ERROR: Template not found. Checked paths:`, potentialPaths);
     throw new Error(`Email template ${templateName} not found.`);
   }
 
   try {
-    console.log(`[Email] Attempting to send to: ${to}`);
-    console.log(`[Email] Using template: ${templatePath}`);
-    
-    // Render the EJS template
-    const html = await ejs.renderFile(templatePath, templateData) as string;
+    console.log(`[Email] Attempting render: ${templatePath}`);
+    const html = await ejs.renderFile(templatePath, templateData);
+    console.log(`[Email] Render successful.`);
 
     const mailOptions = {
       from: `"Nexus Express" <${process.env.EMAIL_USER}>`,
       to,
       subject,
-      html,
+      html: html as string,
     };
 
+    console.log(`[Email] Connecting to SMTP on port 465 (Secure: true)...`);
     const info = await transporter.sendMail(mailOptions);
-    console.log('[Email] Success! Message ID:', info.messageId);
+    console.log('[Email] SENT SUCCESSFULLY! Message ID:', info.messageId);
     return info;
   } catch (error) {
-    console.error('[Email] CRITICAL FAILURE:', error);
+    console.error('[Email] ERROR ENCOUNTERED:', error);
     throw error;
   }
 };

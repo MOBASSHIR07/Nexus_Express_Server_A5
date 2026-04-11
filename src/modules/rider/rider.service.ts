@@ -105,7 +105,7 @@ const updateParcelStatusIntoDB = async (riderUserId: string, payload: { parcelId
     throw new AppError(403, "Unauthorized access to this parcel");
   }
 
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
 
     const updatedParcel = await tx.parcel.update({
       where: { id: parcelId },
@@ -122,37 +122,29 @@ const updateParcelStatusIntoDB = async (riderUserId: string, payload: { parcelId
           message: `Parcel status updated to ${status.toLowerCase()}`
         }
       });
-       // see is it in right place
-    await tx.tracking.update({
-      where: { parcelId },
-      data: { status: status as any }
-    });
+      await tx.tracking.update({
+        where: { parcelId },
+        data: { status: status as any }
+      });
     }
-   
-
 
     if (status === "DELIVERED") {
       let riderCommission = 0;
       const totalPaid = Number(parcel.price);
 
-
       if (parcel.category === "PARCEL") {
         riderCommission = 50;
       } else {
-
         riderCommission = totalPaid * 0.30;
       }
-
 
       await tx.rider.update({
         where: { id: rider.id },
         data: {
-          //   totalEarned: { increment: riderCommission },
           withdrawableBalance: { increment: riderCommission },
           status: "AVAILABLE"
         }
       });
-
 
       await tx.riderPayment.create({
         data: {
@@ -162,25 +154,7 @@ const updateParcelStatusIntoDB = async (riderUserId: string, payload: { parcelId
           status: "PENDING"
         }
       });
-
-      // Send email to sender
-      if (parcel?.sender?.email) {
-        sendEmail(
-          parcel.sender.email,
-          "Your parcel has been delivered!",
-          {
-            senderName: parcel.sender.name,
-            trackingCode: parcel.trackingCode,
-            parcelTitle: parcel.title,
-            receiverName: parcel.receiverName,
-            deliveryAddress: parcel.deliveryAddress,
-            frontendUrl: process.env.FRONTEND_URL || "http://localhost:5000"
-          },
-          "delivery-confirmation"
-        ).catch(err => console.error("Email sending failed:", err));
-      }
     } else if (status === "PICKED_UP") {
-      // When the rider picks up the parcel, they become BUSY
       await tx.rider.update({
         where: { id: rider.id },
         data: { status: "BUSY" }
@@ -189,6 +163,30 @@ const updateParcelStatusIntoDB = async (riderUserId: string, payload: { parcelId
 
     return updatedParcel;
   });
+
+  // Send email to sender (outside transaction with await for debugging)
+  if (status === "DELIVERED" && parcel?.sender?.email) {
+    console.log(`[Email] Triggering post-delivery email to: ${parcel.sender.email}`);
+    try {
+      await sendEmail(
+        parcel.sender.email,
+        "Your parcel has been delivered!",
+        {
+          senderName: parcel.sender.name,
+          trackingCode: parcel.trackingCode,
+          parcelTitle: parcel.title,
+          receiverName: parcel.receiverName,
+          deliveryAddress: parcel.deliveryAddress,
+          frontendUrl: process.env.FRONTEND_URL || "http://localhost:5000"
+        },
+        "delivery-confirmation"
+      );
+    } catch (err) {
+      console.error("[Email] ERROR: Delivery notification failed:", err);
+    }
+  }
+
+  return result;
 };
 
 const createWithdrawRequest = async (riderUserId: string, payload: { amount: number; method: any; accountNumber: string }) => {
@@ -274,7 +272,7 @@ const respondToAssignedParcelIntoDB = async (riderUserId: string, payload: { par
           data: { status: "ACCEPTED" }
         });
       }
-     
+
       return updatedParcel;
     } else {
       const updatedParcel = await tx.parcel.update({
