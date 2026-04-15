@@ -16,8 +16,8 @@ Built with **TypeScript** and **Node.js**, it leverages **Prisma ORM** for type-
 
 ### 💰 Intelligent Pricing Model
 The system automatically calculates delivery costs based on parcel category and weight:
-*   **Standard Parcel**: Flat rate of **$200**.
-*   **Cargo/Heavy**: Dynamic pricing based on weight (**$100 per unit**).
+*   **Standard Parcel**: Flat rate of **$200** (just an example).
+*   **Cargo/Heavy**: Dynamic pricing based on weight. (**$100 per unit**)  just an example.
 
 ### 💳 Payment & Security
 *   **Checkout Flow**: Parcels are created in a `PENDING` state. The API initiates a **Stripe Checkout Session** immediately.
