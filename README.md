@@ -6,36 +6,52 @@
 [![Stripe](https://img.shields.io/badge/Stripe-626CD9?style=for-the-badge&logo=Stripe&logoColor=white)](https://stripe.com/)
 [![Express.js](https://img.shields.io/badge/Express.js-404D59?style=for-the-badge)](https://expressjs.com/)
 
-**Nexus Express** is a robust, scalable backend solution for a modern delivery and logistics platform. It manages the entire parcel lifecycle—from initial booking and secure payment to rider assignment, real-time tracking, and final delivery. 
+**Nexus Express** is a professional-grade delivery and logistics ecosystem. It manages the entire parcel lifecycle—from intelligent dynamic pricing and Stripe-integrated payments to automated rider assignments and recursive tracking. Built for performance and security, it provides tailored dashboards for Senders, Riders, and Administrators.
 
 Built with **TypeScript** and **Node.js**, it leverages **Prisma ORM** for type-safe database interactions and **Better-Auth** for secure, industry-standard authentication.
 
 ---
 
-## 🏗️ Core Architecture & Features
+## ⚙️ Business Logic & Workflow
 
-### 👤 User Management
-*   **Role-Based Access Control (RBAC)**: Distinct permissions for `SENDER`, `RIDER`, and `ADMIN`.
-*   **Secure Authentication**: Fully integrated with **Better-Auth** supporting multi-session management and secure token handling.
-*   **Profile Services**: Robust user profiles with activity tracking and history.
+### 💰 Intelligent Pricing Model
+The system automatically calculates delivery costs based on parcel category and weight:
+*   **Standard Parcel**: Flat rate of **$200**.
+*   **Cargo/Heavy**: Dynamic pricing based on weight (**$100 per unit**).
 
-### 📦 Parcel & Logistics
-*   **Lifecycle Management**: Automated transitions through `PENDING`, `RIDER_ASSIGNED`, `ACCEPTED`, `PICKED_UP`, `IN_TRANSIT`, and `DELIVERED`.
-*   **Dynamic Assignment**: Intelligent rider assignment based on availability and location.
-*   **Real-time Tracking**: Granular tracking steps with location updates and status messages.
+### 💳 Payment & Security
+*   **Checkout Flow**: Parcels are created in a `PENDING` state. The API initiates a **Stripe Checkout Session** immediately.
+*   **Verification**: Only paid parcels are eligible for rider assignment.
+*   **Integrity**: Zod schemas enforce strict data types, ensuring no malformed data enters the database.
 
-### 🚴 Rider Ecosystem
-*   **Application Workflow**: Streamlined onboarding for new riders.
-*   **Earning Dashboard**: Automated rider payment tracking per successful delivery.
-*   **Withdrawal System**: Secure payout requests via Bank, bKash, Nagad, or Rocket.
+### 🚴 Rider Commission & Payouts
+*   **Standard Earnings**: Riders earn a fixed **$50** per successful delivery.
+*   **Cargo Commission**: Riders receive **30% of the total delivery fee** for cargo items.
+*   **Withdrawals**: Riders can track their `withdrawableBalance` and request payouts via Bank, bKash, or Nagad once their earnings are approved.
 
-### 💳 Payments & Security
-*   **Stripe Integration**: Secure checkout flows for parcel payments.
-*   **Webhooks**: Real-time payment verification and automated status updates.
-*   **Zod Validation**: Strict schema validation for all API inputs to ensure data integrity.
+### 📍 Recursive Tracking System
+*   **Historical Steps**: Every status change (Assigned -> Accepted -> Picked Up -> Delivered) is logged as a `TrackingStep` with a timestamp and location.
+*   **Public Access**: Senders can track their parcels via a unique `trackingCode` without needing to log in.
 
-### 📧 Automated Notifications
-*   **Email Engine**: Powered by **Nodemailer** with dynamic **EJS** templates for rider assignments, payment receipts, and delivery confirmations.
+---
+
+## 🏗️ Core Module Functionality
+
+### 👤 User Module (Sender)
+*   **Booking**: Create parcel requests with detailed receiver info.
+*   **Dashboard**: Monitor active deliveries and historical payments.
+*   **Reviews**: Provide feedback and ratings to riders post-delivery.
+
+### 🚴 Rider Module
+*   **Application**: Submit onboarding requests with vehicle details and region.
+*   **Responses**: Accept or Reject assigned parcels based on availability.
+*   **Lifecycle**: Update parcel status (Picked Up, In Transit, Delivered) in real-time.
+
+### 🛡️ Admin Module
+*   **Control Center**: Approve new riders and manage user roles (Ban/Unban).
+*   **Logistics**: Manually assign riders to paid parcels based on load and location.
+*   **Financials**: Review and approve rider withdraw requests.
+*   **Business Intelligence**: High-level statistics on revenue, profit, and delivery volume.
 
 ---
 
@@ -163,7 +179,7 @@ Contributions are what make the open source community such an amazing place to l
 ---
 
 ## 📄 License
-Distributed under the **MIT License**. See `LICENSE` for more information.
+Distributed under the **MIT License**. See the [LICENSE](LICENSE) file for the full legal text.
 
 ---
 
